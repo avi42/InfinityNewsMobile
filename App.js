@@ -4,7 +4,8 @@ import {
     Text,
     StyleSheet,
     Platform,
-    StatusBar
+    StatusBar,
+    Image,
 } from 'react-native';
 
 import { createAppContainer } from 'react-navigation';
@@ -12,6 +13,70 @@ import { createBottomTabNavigator } from 'react-navigation-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { FlatList } from 'react-native-gesture-handler';
 import { ActivityIndicator } from 'react-native-paper';
+
+class ArticleView extends Component {
+
+    constructor(props){
+
+        super(props);
+
+        this.state = {
+            styles: StyleSheet.create({
+
+                outerArticleContainer: {
+                    flex: 1,
+                    flexDirection: 'column',
+                    width: '100%',
+                    marginTop: 20,
+                },
+
+                innerArticleContiner: {
+                    flex: 1,
+                    flexDirection: 'row',
+                    backgroundColor: 'rgba(0,153,255,0.5)',
+                    marginRight: 5,
+                    marginLeft: 5,
+                },
+
+                image: {
+                    width: 100,
+                    height: 60,
+                },
+
+                textView: {
+                    flex: 1,
+                    flexDirection: 'column',
+                    height: 60,
+                    paddingLeft: 5,
+                },
+
+                titleText: {
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    fontFamily: 'Roboto',
+                }
+
+            })
+        };
+
+    }
+
+    render(){
+        return(
+            <View style={this.state.styles.outerArticleContainer}>
+                <View style={this.state.styles.innerArticleContiner}>
+                    <Image 
+                        source={{uri: this.props.imageUrl}}
+                        style={this.state.styles.image}
+                    />
+                    <View style={this.state.styles.textView}>
+                        <Text style={this.state.styles.titleText}>{this.props.title}</Text>
+                    </View>
+                </View>
+            </View>
+        )
+    }
+}
 
 export class MyNewsScreen extends Component {
     render() {
@@ -72,7 +137,13 @@ export class HeadlinesScreen extends Component {
             <View style={styles.container}>
                 <FlatList
                     data={this.state.data}
-                    renderItem={({ item, index }) => <View key={index}><Text>{item['title']}</Text></View>}
+                    renderItem={({ item, index }) =>
+                        <ArticleView
+                            key={index} 
+                            title={item.title}
+                            imageUrl={item.imageUrl}
+                        />
+                    }
                 />
             </View>
         )
@@ -124,9 +195,6 @@ export default createAppContainer(tabNavigator);
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
         marginTop: Platform.OS === 'ios' ? 20 : StatusBar.currentHeight,
-        padding: 20 
     },
 });
