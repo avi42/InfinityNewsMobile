@@ -9,12 +9,14 @@ import {
     AsyncStorage,
     TouchableOpacity,
     TextInput,
+    Linking,
+    RefreshControl,
 } from 'react-native';
 
 import { createAppContainer } from 'react-navigation';
 import { createBottomTabNavigator } from 'react-navigation-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { FlatList } from 'react-native-gesture-handler';
+import { FlatList, TouchableHighlight } from 'react-native-gesture-handler';
 import { ActivityIndicator } from 'react-native-paper';
 
 _storeTopics = async (topicsArray) => {
@@ -118,10 +120,12 @@ class ArticleView extends Component {
         return(
             <View style={this.state.styles.outerArticleContainer}>
                 <View style={this.state.styles.innerArticleContiner}>
-                    <Image 
-                        source={{uri: this.props.imageUrl}}
-                        style={this.state.styles.image}
-                    />
+                    <TouchableHighlight onPress={() => Linking.openURL(this.props.articleUrl)} style={this.state.styles.image}>
+                        <Image 
+                            source={{uri: this.props.imageUrl}}
+                            style={this.state.styles.image}
+                        />
+                    </TouchableHighlight>
                     <View style={this.state.styles.textView}>
                         <Text style={this.state.styles.titleText}>{this.props.title}</Text>
                         <Text numberOfLines={1}>
@@ -135,74 +139,53 @@ class ArticleView extends Component {
     }
 }
 
-class TopicView extends Component{
-    constructor(props){
-
-        super(props);
-
-        this.state = {
-            styles: StyleSheet.create({
-
-                
-
-            })
-        };
-
-    }
-
-    deleteOnPress = () => {
-        console.log("delete button clicked");
-        TopicsScreen.removeData(this.props.topic);
-    }
-
-    render(){
-        return(
-            <View style={this.state.styles.outerTopicContainer}>
-                <View style={this.state.styles.innerTopicContainer}>
-                    <View style={this.state.styles.trashIconContainer}>
-                            <Icon reverse name="ios-trash" color='#0099ff' size={24} onPress={() => this.deleteOnPress()}/>
-                    </View>
-                    <View style={this.state.styles.topicView}>
-                        <Text style={this.state.styles.topicText}>{this.props.topic}</Text>
-                    </View>
-                </View>
-            </View>
-        )
-    }
-}
-
 export class MyNewsScreen extends Component {
     constructor(props) {
         super(props);
         this.state = {
             isLoading: true,
+            refreshing: false,
         }
     }
 
-    componentDidMount() {
-
+    fetch = () => {
         _retrieveTopics().then((topics) => {
 
             const topicsString = "'" + topics.join("','") + "'";
 
             const uri = 'https://www.infinitynews.org/api/topics?q=' + topicsString;
             console.log(uri); 
-            return fetch(uri)
+            
+            fetch(uri)
             .then(response => response.json())
+            .catch((error) => {
+                console.error(error);
+                this.setState({refreshing: false});
+            })
             .then((responseJson) => {
                 this.setState({
                     isLoading: false,
-                    data: responseJson
+                    data: responseJson,
+                    refreshing: false,
                 },
                 function () {
                     // console.log(responseJson);
                 });
             }).catch((error) => {
                 console.error(error);
+                this.setState({refreshing: false});
             });
 
         });
-        
+    }
+
+    _onRefresh = () => {
+        this.setState({refreshing: true});
+        this.fetch();
+    }
+
+    componentDidMount() {
+        this.fetch();        
     }
 
     render() {
@@ -227,6 +210,13 @@ export class MyNewsScreen extends Component {
                             source={item.source}
                             publishedAt={item.publishedAt}
                             imageUrl={item.imageUrl}
+                            articleUrl={item.url}
+                        />
+                    }
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={this.state.refreshing}
+                            onRefresh={this._onRefresh.bind(this)}
                         />
                     }
                 />
@@ -328,7 +318,7 @@ export class TopicsScreen extends Component {
         this.topicsArray.splice(removedTopicIndex, 1);
         _storeTopics(this.topicsArray).then(() => {
             this.setState({
-                topicsArrayHolder: [this.topicsArray],
+                topicsArrayHolder: [...this.topicsArray],
             })
         });
     }
@@ -395,24 +385,40 @@ export class HeadlinesScreen extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            isLoading: true
+            isLoading: true,
+            refreshing: false,
         }
     }
 
-    componentDidMount() {
-        return fetch('https://www.infinitynews.org/api')
+    fetch = () => {
+        fetch('https://www.infinitynews.org/api')
             .then(response => response.json())
+            .catch((error) => {
+                console.error(error);
+                this.setState({refreshing: false});
+            })
             .then((responseJson) => {
                 this.setState({
                     isLoading: false,
-                    data: responseJson
+                    data: responseJson,
+                    refreshing: false,
                 },
                 function () {
                     // console.log(responseJson);
                 });
             }).catch((error) => {
                 console.error(error);
-            })
+                this.setState({refreshing: false});
+            });
+    }
+
+    _onRefresh = () => {
+        this.setState({refreshing: true});
+        this.fetch();
+    }
+
+    componentDidMount() {
+        return this.fetch();
     }
 
     render() {
@@ -437,6 +443,13 @@ export class HeadlinesScreen extends Component {
                             source={item.source}
                             publishedAt={item.publishedAt}
                             imageUrl={item.imageUrl}
+                            articleUrl={item.url}
+                        />
+                    }
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={this.state.refreshing}
+                            onRefresh={this._onRefresh.bind(this)}
                         />
                     }
                 />
@@ -477,7 +490,7 @@ const tabNavigator = createBottomTabNavigator({
     initialRouteName: 'Headlines',
     order: ['MyNews', 'Topics', 'Headlines'],
     navigationOptions: {
-        tabBarVisible: true
+        tabBarVisible: true,
     },
     tabBarOptions: {
         activeTintColor: '#0099ff',
